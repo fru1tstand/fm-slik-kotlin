@@ -103,6 +103,7 @@ class Slik {
    * injection is not an option (ie. when you have no control over the object lifecycle). In this
    * case, any subclass that requires injection must also call [inject].
    */
+  @Deprecated("Use direct field injection instead. See #inject(String?)")
   fun <T : Any> inject(instance: T, abstractClass: KClass<T>? = null) {
     // Inject into annotated fields
     try {
@@ -123,13 +124,38 @@ class Slik {
   }
 
   /**
+   * Directly supplies an optionally [name]ed value to a field. This should only be used when
+   * constructor injection is not an option (ie. when you have no control over the object
+   * lifecycle). The most common pattern of using this is as follows:
+   * ```
+   * class MyClass {
+   *   private val scope = Slik.get(MyApplication::class)
+   *   private val myDependency = scope.inject<MyDependency>()
+   *   ...
+   * }
+   * ```
+   */
+  inline fun <reified T : Any> inject(name: String? = null): T {
+    return resolve(T::class, name)
+  }
+
+  /**
    * Retrieves an instance of [kClass] by following the injection rules of Slik. If the
    * class is marked as singleton, only a single instance per scope per value will be created.
    * Otherwise, a new instance will be attempted. The class must be marked as [Inject]able and
    * must have a primary constructor (ie. be a Kotlin class).
    */
-  private fun <T : Any> resolve(kClass: KClass<T>, name: Named? = null): T {
-    val singletonName = makeClassKey(kClass, name?.value)
+  fun <T : Any> resolve(kClass: KClass<T>, name: Named? = null): T =
+      resolve(kClass, name?.value)
+
+  /**
+   * Retrieves an instance of [kClass] by following the injection rules of Slik. If the
+   * class is marked as singleton, only a single instance per scope per value will be created.
+   * Otherwise, a new instance will be attempted. The class must be marked as [Inject]able and
+   * must have a primary constructor (ie. be a Kotlin class).
+   */
+  fun <T : Any> resolve(kClass: KClass<T>, name: String? = null): T {
+    val singletonName = makeClassKey(kClass, name)
     var injectedClass = kClass
 
     // If we have a reference, it's a singleton
