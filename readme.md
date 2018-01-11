@@ -70,36 +70,24 @@ understand.
     useful for classes you have no control over (framework, library, etc).
     + Example:
       `Slik#get(MyApplication::class).bind(Android.content.SharedPreferences::class, com.example.MySharedPreferences::class)`
-+ `Slik#inject(Any, KClass? = null)`
-  + Entrypoint for field injection. This method only injects fields for the given class (and
-    no children classes). Children are expected to inject their own dependencies.
++ `Slik#inject<T>(named: String?)`
+  + Entrypoint for field injection. Resolves fields on class creation if constructor injection is
+    not available (ie. when you're not in control of the object lifecycle).
     + Example:
       ```
       open class Parent : Activity {
-        // Our field we want to inject
-        @Inject private lateinit var foo: Foo
+        // This isn't strictly necessary, we could skip making 'scope' and straight chain calls,
+        // but this makes it look nicer.
+        private val scope = Slik.get(MyApplication::class)
         
-        // Android controls the lifecycle, so we have to use what it provides us
-        override fun onCreate(state: Bundle?) {
-          // Just Android things
-          super.onCreate(state)
-          
-          // Because this class will be extended, we must specify we want to inject this class's
-          // fields. We do this by passing both the instance and this class to #inject.
-          Slik.get(MyApplication::class).inject(this, Parent::class)
-        }
+        // Our field we want to inject
+        private val foo = scope.inject<Foo>("example-name")
       }
       
       class Child : Parent() {
-        @Inject private lateinit var bar: Bar
-        
-        override fun onCreate(state: Bundle?) {
-          super.onCreate(state)
-          
-          // Because this is the top level class, we don't need to pass the class name to inject,
-          // just our instance.
-          Slik.get(MyApplication::class).inject(this)
-        }
+        private val scope = Slik.get(MyApplication::class)
+        private val bar = scope.inject<Bar>()
+        private val baz = scope.inject<BazFactory>().create()
       }
       ```
 
@@ -117,23 +105,21 @@ class ExampleApplication {
     val ENABLE_Y = "enableY"
   }
   
-  @Inject private lateinit var foo: Foo
-  
   init {
     FlagReader flagReader = new FlagReader("http://example.com/flagreader")
     
     // Get our scope
     Slik.get(ExampleApplication::class)
     
-    // Pass stuff to our scope
+        // Pass stuff to our scope
         .provide(new File("resources.json"))
         .provide(false, IS_DEBUGGING)
         .provide(flagReader.getBool(ENABLE_X), ENABLE_X)
         .provide(flagReader.getBool(ENABLE_Y), ENABLE_Y)
         .bind(Bar::class, BarImpl::class)
-        
-    // Finally, create the dependencies of this class to automatically create Foo
-        .inject(this)
+    
+    // Instantiate our variables
+    val foo = Slik.get(ExampleApplication::class).inject<Foo>()
     
     // Now we can make our main application looper
     while (true) {
@@ -146,6 +132,7 @@ class ExampleApplication {
 
 ```
 // Foo.kt
+@Inject
 class Foo(
     private val resource: File,
     private val @Named(ExampleApplication.IS_DEBUGGING) isDebugging: Boolean,
