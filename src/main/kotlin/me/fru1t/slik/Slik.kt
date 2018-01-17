@@ -144,6 +144,8 @@ class Slik {
    * class is marked as singleton, only a single instance per scope per value will be created.
    * Otherwise, a new instance will be attempted. The class must be marked as [Inject]able and
    * must have a primary constructor (ie. be a Kotlin class).
+   *
+   * One shouldn't invoke this method directly. Use [inject] instead.
    */
   fun <T : Any> resolve(kClass: KClass<T>, name: Named? = null): T =
       resolve(kClass, name?.value)
@@ -153,6 +155,8 @@ class Slik {
    * class is marked as singleton, only a single instance per scope per value will be created.
    * Otherwise, a new instance will be attempted. The class must be marked as [Inject]able and
    * must have a primary constructor (ie. be a Kotlin class).
+   *
+   * One shouldn't invoke this method directly. Use [inject] instead.
    */
   fun <T : Any> resolve(kClass: KClass<T>, name: String? = null): T {
     val singletonName = makeClassKey(kClass, name)
